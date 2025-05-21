@@ -1,0 +1,158 @@
+
+-- Inserciones Tabla Hoteles
+
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel A', 'Calle Falsa 123', 'Ciudad A', 'País A', 5);
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel B', 'Avenida Siempre Viva 742', 'Ciudad B', 'País B', 4);
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel C', 'Calle Real 456', 'Ciudad C', 'País C', 3);
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel D', 'Calle del Sol 789', 'Ciudad D', 'País D', 4);
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel E', 'Avenida Libertad 101', 'Ciudad E', 'País E', 5);
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel F', 'Calle San Juan 202', 'Ciudad F', 'País F', 2);
+INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria) VALUES ('Hotel G', 'Calle Norte 303', 'Ciudad G', 'País G', 3);
+
+
+
+-- Inserciones Tabla Tipo Habitacion
+
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Individual', 1, 50.00);
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Doble', 2, 75.00);
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Triple', 3, 100.00);
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Suite', 4, 150.00);
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Económica', 2, 60.00);
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Presidencial', 4, 200.00);
+INSERT INTO TipoHabitacion (descripcion, capacidad, precio_base) VALUES ('Familiar', 5, 120.00);
+
+
+-- Inserciones Tabla Habitaciones
+
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('101', 1, 'disponible', 1, 1);
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('102', 1, 'disponible', 1, 2);
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('201', 2, 'ocupada', 2, 1);
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('202', 2, 'disponible', 2, 3);
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('301', 3, 'ocupada', 3, 2);
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('302', 3, 'disponible', 3, 4);
+INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion) VALUES ('401', 4, 'disponible', 4, 1);
+
+
+-- Inserciones Tabla Clientes
+
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('Juan', 'Pérez', 'juanperez@mail.com', '555-1234', '123456789');
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('María', 'González', 'mariagonzalez@mail.com', '555-5678', '987654321');
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('Carlos', 'Martínez', 'carlosmartinez@mail.com', '555-8765', '112233445');
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('Ana', 'Rodríguez', 'anarodriguez@mail.com', '555-2468', '998877665');
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('Luis', 'López', 'luislopez@mail.com', '555-1357', '445566778');
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('Pedro', 'Sánchez', 'pedrosanchez@mail.com', '555-9753', '223344556');
+INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad) VALUES ('Sofia', 'Díaz', 'sofiadiaz@mail.com', '555-8642', '667788990');
+
+
+-- Inserciones Tabla Reservas
+
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (1, 1, '2025-06-01', '2025-06-05', 'confirmada');
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (2, 1, '2025-06-06', '2025-06-10', 'pendiente');
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (3, 2, '2025-06-01', '2025-06-07', 'confirmada');
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (4, 3, '2025-06-10', '2025-06-15', 'cancelada');
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (5, 4, '2025-06-15', '2025-06-20', 'confirmada');
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (6, 5, '2025-06-21', '2025-06-25', 'pendiente');
+INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado) VALUES (7, 6, '2025-06-22', '2025-06-27', 'confirmada');
+
+
+-- Inserciones Tabla Estancias
+
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (1, '2025-06-01 14:00:00', '2025-06-05 11:00:00', 1, 'Sin observaciones');
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (2, '2025-06-06 14:00:00', '2025-06-10 11:00:00', 2, 'Cliente solicita habitación cerca del ascensor');
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (3, '2025-06-01 15:00:00', '2025-06-07 12:00:00', 3, 'Solicitud de habitación con vista al mar');
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (4, '2025-06-10 16:00:00', '2025-06-15 12:00:00', 4, 'Cambio de habitación durante la estancia');
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (5, '2025-06-15 14:00:00', '2025-06-20 11:00:00', 5, 'Habitación tranquila solicitada');
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (6, '2025-06-21 15:00:00', '2025-06-25 11:00:00', 6, 'Cliente llegó tarde');
+INSERT INTO Estancia (id_reserva, fecha_checkin, fecha_checkout, id_habitacion, observaciones) VALUES (7, '2025-06-22 15:30:00', '2025-06-27 12:00:00', 7, 'Solicitar cama extra');
+INSERT INTO estancia (id_reserva, id_habitacion, fecha_checkin, observaciones) VALUES (1, 1, CURRENT_TIMESTAMP, 'Estancia activa de prueba');
+
+
+-- Inserciones Tabla Servicios
+
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Desayuno', 'Desayuno buffet para 2 personas', 20.00);
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Almuerzo', 'Almuerzo de 3 tiempos', 30.00);
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Spa', 'Acceso al spa por 1 hora', 50.00);
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Cena romántica', 'Cena para dos personas con decoración especial', 100.00);
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Masajes', 'Masaje relajante de 60 minutos', 40.00);
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Traslado', 'Traslado al aeropuerto', 25.00);
+INSERT INTO Servicio (nombre, descripcion, precio) VALUES ('Wi-Fi', 'Acceso a Wi-Fi por 24 horas', 5.00);
+
+
+-- Inserciones Tabla Facturas
+
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (1, '2025-06-05', 150.00, 'Tarjeta de crédito', 'pendiente');
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (2, '2025-06-10', 200.00, 'Efectivo', 'pagada');
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (3, '2025-06-07', 250.00, 'Transferencia bancaria', 'pendiente');
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (4, '2025-06-15', 300.00, 'Tarjeta de crédito', 'pagada');
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (5, '2025-06-20', 180.00, 'Efectivo', 'pendiente');
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (6, '2025-06-25', 120.00, 'Tarjeta de débito', 'pagada');
+INSERT INTO Factura (id_estancia, fecha_emision, total, metodo_pago, estado) VALUES (7, '2025-06-27', 160.00, 'Transferencia bancaria', 'pendiente');
+
+
+-- Inserciones Tabla DetalleFactura
+
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (1, 'Estancia habitación 101', 4, 50.00);
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (2, 'Estancia habitación 102', 5, 40.00);
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (3, 'Estancia habitación 201', 6, 30.00);
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (4, 'Estancia habitación 202', 7, 42.85);
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (5, 'Estancia habitación 301', 5, 50.00);
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (6, 'Estancia habitación 302', 4, 40.00);
+INSERT INTO DetalleFactura (id_factura, concepto, cantidad, precio_unitario) VALUES (7, 'Estancia habitación 401', 5, 48.00);
+
+-- Inserciones Tabla Empleados
+
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Pedro', 'Gómez', 'pedrogomez@mail.com', '555-0011', 1);
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Laura', 'Martín', 'lauramartin@mail.com', '555-0022', 2);
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Carlos', 'Sánchez', 'carlossanchez@mail.com', '555-0033', 3);
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Ana', 'Jiménez', 'anajimenez@mail.com', '555-0044', 4);
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Luis', 'Pérez', 'luisperez@mail.com', '555-0055', 5);
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Marta', 'Hernández', 'martahernandez@mail.com', '555-0066', 6);
+INSERT INTO Empleado (nombre, apellido, email, telefono, id_hotel) VALUES ('Jorge', 'López', 'jorgelopez@mail.com', '555-0077', 7);
+
+
+-- Inserciones Tabla Roles
+
+INSERT INTO Rol (nombre) VALUES ('Recepcionista');
+INSERT INTO Rol (nombre) VALUES ('Camarero');
+INSERT INTO Rol (nombre) VALUES ('Gerente');
+INSERT INTO Rol (nombre) VALUES ('Mantenimiento');
+INSERT INTO Rol (nombre) VALUES ('Cocinero');
+INSERT INTO Rol (nombre) VALUES ('Limpieza');
+INSERT INTO Rol (nombre) VALUES ('Conserje');       
+
+
+-- Inserciones Tabla EmpleadoRol
+
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (1, 1);
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (2, 2);
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (3, 3);
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (4, 4);
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (5, 5);
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (6, 6);
+INSERT INTO EmpleadoRol (id_empleado, id_rol) VALUES (7, 7);
+
+
+-- Inserciones Tabla Usuarios
+
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('juanperez', 'password123', 1, NULL, 'Cliente');
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('mariagonzalez', 'password456', 2, NULL, 'Cliente');
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('pedrogomez', 'password789', NULL, 1, 'Empleado');
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('lauramartin', 'password321', NULL, 2, 'Empleado');
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('carlosmartinez', 'password654', 3, NULL, 'Cliente');
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('luislopez', 'password987', NULL, 5, 'Empleado');
+INSERT INTO Usuario (username, password_hash, id_cliente, id_empleado, rol) VALUES ('martahernandez', 'password159', NULL, 6, 'Empleado');
+
+
+-- Inserciones Tabla HabitaciónServicio
+
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (1, 1);
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (2, 2);
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (3, 3);
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (4, 4);
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (5, 5);
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (6, 6);
+INSERT INTO HabitacionServicio (id_habitacion, id_servicio) VALUES (7, 7);
+
+
+
+

@@ -1,0 +1,182 @@
+-- Creación Base de Datos	
+CREATE DATABASE hotel_db;
+
+-- Tabla: Hotel
+CREATE TABLE Hotel (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    direccion TEXT NOT NULL,
+    ciudad VARCHAR(50) NOT NULL,
+    pais VARCHAR(50) NOT NULL,
+    categoria INT
+);
+
+-- Tabla: TipoHabitacion	
+CREATE TABLE TipoHabitacion (
+    id SERIAL PRIMARY KEY,
+    descripcion VARCHAR(100) NOT NULL,
+    capacidad INT NOT NULL,
+    precio_base DECIMAL(10,2) NOT NULL
+);
+
+-- Tabla: Habitacion
+CREATE TABLE Habitacion (
+    id SERIAL PRIMARY KEY,
+    numero VARCHAR(10) NOT NULL,
+    piso INT NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'disponible',
+    id_hotel INT NOT NULL,
+    id_tipo_habitacion INT NOT NULL,
+    UNIQUE (numero, id_hotel),
+    CONSTRAINT fk_habitacion_hotel FOREIGN KEY (id_hotel) REFERENCES Hotel(id),
+    CONSTRAINT fk_habitacion_tipo FOREIGN KEY (id_tipo_habitacion) REFERENCES TipoHabitacion(id)
+);
+
+-- Tabla: Cliente
+CREATE TABLE Cliente (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    telefono VARCHAR(20),
+    documento_identidad VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- Tabla: Reserva
+CREATE TABLE Reserva (
+    id SERIAL PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_hotel INT NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    fecha_reserva TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reserva_cliente FOREIGN KEY (id_cliente) REFERENCES Cliente(id),
+    CONSTRAINT fk_reserva_hotel FOREIGN KEY (id_hotel) REFERENCES Hotel(id)
+);
+
+-- Tabla: Estancia
+CREATE TABLE Estancia (
+    id SERIAL PRIMARY KEY,
+    id_reserva INT NOT NULL,
+    fecha_checkin TIMESTAMP,
+    fecha_checkout TIMESTAMP,
+    id_habitacion INT NOT NULL,
+    observaciones TEXT,
+    CONSTRAINT fk_estancia_reserva FOREIGN KEY (id_reserva) REFERENCES Reserva(id),
+    CONSTRAINT fk_estancia_habitacion FOREIGN KEY (id_habitacion) REFERENCES Habitacion(id)
+);
+
+-- Tabla: Servicio
+CREATE TABLE Servicio (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+    precio DECIMAL(10,2) NOT NULL
+);
+
+-- Tabla: Factura
+CREATE TABLE Factura (
+    id SERIAL PRIMARY KEY,
+    id_estancia INT NOT NULL,
+    fecha_emision DATE DEFAULT CURRENT_DATE,
+    total DECIMAL(10,2) NOT NULL,
+    metodo_pago VARCHAR(50) NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    CONSTRAINT fk_factura_estancia FOREIGN KEY (id_estancia) REFERENCES Estancia(id)
+);
+
+-- Tabla: DetalleFactura
+CREATE TABLE DetalleFactura (
+    id SERIAL PRIMARY KEY,
+    id_factura INT NOT NULL,
+    concepto VARCHAR(100) NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED,
+    CONSTRAINT fk_detalle_factura FOREIGN KEY (id_factura) REFERENCES Factura(id)
+);
+
+-- Tabla: Empleado
+CREATE TABLE Empleado (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    telefono VARCHAR(20),
+    id_hotel INT NOT NULL,
+    CONSTRAINT fk_empleado_hotel FOREIGN KEY (id_hotel) REFERENCES Hotel(id)
+);
+
+-- Tabla: Rol
+CREATE TABLE Rol (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Tabla: EmpleadoRol
+CREATE TABLE EmpleadoRol (
+    id SERIAL PRIMARY KEY,
+    id_empleado INT NOT NULL,
+    id_rol INT NOT NULL,
+    CONSTRAINT fk_empleado_rol_empleado FOREIGN KEY (id_empleado) REFERENCES Empleado(id),
+    CONSTRAINT fk_empleado_rol_rol FOREIGN KEY (id_rol) REFERENCES Rol(id),
+    UNIQUE (id_empleado, id_rol)
+);
+
+-- Tabla: Usuario
+CREATE TABLE Usuario (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    id_cliente INT,
+    id_empleado INT,
+    rol VARCHAR(50) NOT NULL,
+    CONSTRAINT fk_usuario_cliente FOREIGN KEY (id_cliente) REFERENCES Cliente(id),
+    CONSTRAINT fk_usuario_empleado FOREIGN KEY (id_empleado) REFERENCES Empleado(id)
+);
+
+-- Tabla: HabitacionServicio
+CREATE TABLE HabitacionServicio (
+    id SERIAL PRIMARY KEY,
+    id_habitacion INT NOT NULL,
+    id_servicio INT NOT NULL,
+    CONSTRAINT fk_habitacion_servicio_habitacion FOREIGN KEY (id_habitacion) REFERENCES Habitacion(id),
+    CONSTRAINT fk_habitacion_servicio_servicio FOREIGN KEY (id_servicio) REFERENCES Servicio(id),
+    UNIQUE (id_habitacion, id_servicio)
+);
+
+-- Tabla: AuditoriaReserva
+CREATE TABLE AuditoriaReserva (
+    id SERIAL PRIMARY KEY,
+    id_reserva INT,
+    accion VARCHAR(20) NOT NULL,
+    usuario VARCHAR(100),
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    observaciones TEXT,
+    CONSTRAINT fk_auditoria_reserva FOREIGN KEY (id_reserva) REFERENCES Reserva(id)
+);
+
+-- Tabla: AuditoriaEstancia
+CREATE TABLE AuditoriaEstancia (
+    id SERIAL PRIMARY KEY,
+    id_estancia INT NOT NULL,
+    accion VARCHAR(50) NOT NULL,
+    usuario VARCHAR(100),
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    observaciones TEXT,
+    CONSTRAINT fk_auditoria_estancia FOREIGN KEY (id_estancia) REFERENCES Estancia(id)
+);
+
+-- Tabla: AuditoriaHabitacion
+CREATE TABLE AuditoriaHabitacion (
+    id SERIAL PRIMARY KEY,
+    id_habitacion INT NOT NULL,
+    accion VARCHAR(50) NOT NULL,
+    usuario VARCHAR(100),
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    descripcion TEXT,
+    CONSTRAINT fk_auditoria_habitacion FOREIGN KEY (id_habitacion) REFERENCES Habitacion(id)
+);
+
+

@@ -1,0 +1,1271 @@
+
+-- Índices 
+
+-- Índice para la búsqueda de habitaciones disponibles por hotel:
+
+CREATE INDEX idx_habitacion_estado_hotel ON Habitacion(id_hotel, estado);
+
+-- Índice para la búsqueda de reservas por cliente y hotel:
+
+CREATE INDEX idx_reserva_cliente_hotel ON Reserva(id_cliente, id_hotel);
+
+-- Índice para la búsqueda de estancias por fecha:
+
+CREATE INDEX idx_estancia_fecha_checkin_checkout ON Estancia(fecha_checkin, fecha_checkout);
+
+--Índice para la búsqueda de facturas por estancia:
+
+CREATE INDEX idx_factura_estancia ON Factura(id_estancia);
+
+-- Índice para la búsqueda de empleados por hotel:
+
+CREATE INDEX idx_empleado_hotel ON Empleado(id_hotel);
+
+-- Índice para la búsqueda de servicios disponibles en una habitación:
+
+CREATE INDEX idx_habitacion_servicio ON HabitacionServicio(id_habitacion);
+
+
+
+-- Vistas
+
+-- 1. Vista de Ocupación por Hotel
+
+CREATE VIEW ocupacion_por_hotel AS
+SELECT
+    h.id AS hotel_id,
+    h.nombre AS hotel_nombre,
+    COUNT(DISTINCT ha.id) AS habitaciones_totales,
+    COUNT(DISTINCT e.id) AS habitaciones_ocupadas,
+    COUNT(DISTINCT ha.id) - COUNT(DISTINCT e.id) AS habitaciones_disponibles
+FROM
+    hotel h
+JOIN habitacion ha ON ha.id_hotel = h.id
+LEFT JOIN estancia e ON e.id_habitacion = ha.id
+GROUP BY h.id;
+
+
+-- Cuenta todas las habitaciones de cada hotel y cuántas están ocupadas según las estancias.
+-- Calcula cuántas habitaciones están disponibles.
+
+
+-- 2. Vista de Clientes Frecuentes
+
+CREATE VIEW clientes_frecuentes AS
+SELECT
+    c.id AS cliente_id,
+    c.nombre AS cliente_nombre,
+    c.apellido AS cliente_apellido,
+    COUNT(r.id) AS cantidad_reservas
+FROM
+    cliente c
+JOIN reserva r ON r.id_cliente = c.id
+GROUP BY c.id
+HAVING COUNT(r.id) > 3;  -- Consideramos frecuentes a aquellos con más de 3 reservas
+
+
+-- Muestra los clientes con más de 3 reservas. Puedes ajustar el número según lo que consideres frecuente.
+
+-- 3. Vista de Reservas Futuras
+
+CREATE VIEW reservas_futuras AS
+SELECT
+    r.id AS reserva_id,
+    r.fecha_inicio,
+    r.fecha_fin,
+    c.nombre AS cliente_nombre,
+    h.nombre AS hotel_nombre
+FROM
+    reserva r
+JOIN cliente c ON c.id = r.id_cliente
+JOIN hotel h ON h.id = r.id_hotel
+WHERE r.fecha_inicio > CURRENT_DATE;  -- Solo reservas futuras
+
+
+-- Filtra las reservas que comienzan después de la fecha actual.
+
+-- 4. Vista de Facturación por Cliente
+
+CREATE VIEW facturacion_por_cliente AS
+SELECT
+    f.id AS factura_id,
+    f.fecha_emision,
+    f.total,
+    c.nombre AS cliente_nombre,
+    c.apellido AS cliente_apellido
+FROM
+    factura f
+JOIN estancia e ON e.id = f.id_estancia
+JOIN reserva r ON r.id = e.id_reserva
+JOIN cliente c ON c.id = r.id_cliente;
+
+
+-- Muestra las facturas generadas a partir de las estancias y las reservas, relacionando los clientes.
+
+
+-- 5. Vista de Servicios por Hotel
+
+CREATE VIEW servicios_por_hotel AS
+SELECT
+    h.id AS hotel_id,
+    h.nombre AS hotel_nombre,
+    s.nombre AS servicio_nombre,
+    COUNT(hs.id) AS servicios_usados
+FROM
+    hotel h
+JOIN habitacion ha ON ha.id_hotel = h.id
+JOIN habitacionservicio hs ON hs.id_habitacion = ha.id
+JOIN servicio s ON s.id = hs.id_servicio
+GROUP BY h.id, s.id;
+
+
+-- Muestra los servicios disponibles en cada hotel y cuántas veces se han utilizado.
+
+-- 6. Vista de Estancias Activas
+
+CREATE VIEW estancias_activas AS
+SELECT
+    e.id AS estancia_id,
+    r.id AS reserva_id,
+    c.nombre AS cliente_nombre,
+    c.apellido AS cliente_apellido,
+    h.nombre AS hotel_nombre,
+    ha.numero AS habitacion_numero,
+    e.fecha_checkin
+FROM
+    estancia e
+JOIN reserva r ON r.id = e.id_reserva
+JOIN cliente c ON c.id = r.id_cliente
+JOIN hotel h ON h.id = r.id_hotel
+JOIN habitacion ha ON ha.id = e.id_habitacion
+WHERE e.fecha_checkout IS NULL;  -- Solo estancias activas
+
+
+-- Muestra las estancias activas, es decir, las que aún no han completado el check-out.
+
+
+-- SP
+
+
+-- 1. Stored Procedures Hoteles
+
+-- Crear Hotel
+
+CREATE OR REPLACE PROCEDURE sp_crear_hotel(
+    _nombre VARCHAR(100),
+    _direccion TEXT,
+    _ciudad VARCHAR(50),
+    _pais VARCHAR(50),
+    _categoria INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO Hotel (nombre, direccion, ciudad, pais, categoria)
+    VALUES (_nombre, _direccion, _ciudad, _pais, _categoria);
+END;
+$$;
+
+-- Leer Hotel
+
+CREATE OR REPLACE PROCEDURE sp_leer_hotel(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Usar RAISE NOTICE para imprimir resultados
+    RAISE NOTICE 'Resultado: %', (SELECT nombre FROM Hotel WHERE id = _id);
+END;
+$$;
+
+
+-- Actualizar Hotel
+
+CREATE OR REPLACE PROCEDURE sp_actualizar_hotel(
+    _id INT,
+    _nombre VARCHAR(100),
+    _direccion TEXT,
+    _ciudad VARCHAR(50),
+    _pais VARCHAR(50),
+    _categoria INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE Hotel
+    SET nombre = _nombre, direccion = _direccion, ciudad = _ciudad, pais = _pais, categoria = _categoria
+    WHERE id = _id;
+END;
+$$;
+
+-- Eliminar Hotel
+
+CREATE OR REPLACE PROCEDURE sp_eliminar_hotel(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM Hotel WHERE id = _id;
+END;
+$$;
+
+-- 2. Stored Procedures Habitaciones
+
+-- Crear Habitacion
+
+CREATE OR REPLACE PROCEDURE sp_crear_habitacion(
+    _numero VARCHAR(10),
+    _piso INT,
+    _estado VARCHAR(20),
+    _id_hotel INT,
+    _id_tipo_habitacion INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO Habitacion (numero, piso, estado, id_hotel, id_tipo_habitacion)
+    VALUES (_numero, _piso, _estado, _id_hotel, _id_tipo_habitacion);
+END;
+$$;
+
+-- Leer Habitacion
+
+CREATE OR REPLACE PROCEDURE sp_leer_habitacion(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Usar RAISE NOTICE para mostrar los datos de la habitacion
+    RAISE NOTICE 'Resultado Habitacion: %', (SELECT numero FROM Habitacion WHERE id = _id);
+END;
+$$;
+
+-- Actualizar Habitacion
+
+CREATE OR REPLACE PROCEDURE sp_actualizar_habitacion(
+    _id INT,
+    _numero VARCHAR(10),
+    _piso INT,
+    _estado VARCHAR(20),
+    _id_hotel INT,
+    _id_tipo_habitacion INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE Habitacion
+    SET numero = _numero, piso = _piso, estado = _estado, id_hotel = _id_hotel, id_tipo_habitacion = _id_tipo_habitacion
+    WHERE id = _id;
+END;
+$$;
+
+-- Eliminar Habitacion
+
+CREATE OR REPLACE PROCEDURE sp_eliminar_habitacion(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM Habitacion WHERE id = _id;
+END;
+$$;
+
+-- 3. Stored Procedures Clientes
+
+-- Crear Cliente
+
+CREATE OR REPLACE PROCEDURE sp_crear_cliente(
+    _nombre VARCHAR(100),
+    _apellido VARCHAR(100),
+    _email VARCHAR(100),
+    _telefono VARCHAR(20),
+    _documento_identidad VARCHAR(50)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO Cliente (nombre, apellido, email, telefono, documento_identidad)
+    VALUES (_nombre, _apellido, _email, _telefono, _documento_identidad);
+END;
+$$;
+
+-- Leer Cliente
+
+CREATE OR REPLACE PROCEDURE sp_leer_cliente(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Usar RAISE NOTICE para mostrar los datos del cliente
+    RAISE NOTICE 'Resultado Cliente: %', (SELECT nombre FROM Cliente WHERE id = _id);
+END;
+$$;
+
+-- Actualizar Cliente
+
+CREATE OR REPLACE PROCEDURE sp_actualizar_cliente(
+    _id INT,
+    _nombre VARCHAR(100),
+    _apellido VARCHAR(100),
+    _email VARCHAR(100),
+    _telefono VARCHAR(20),
+    _documento_identidad VARCHAR(50)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE Cliente
+    SET nombre = _nombre, apellido = _apellido, email = _email, telefono = _telefono, documento_identidad = _documento_identidad
+    WHERE id = _id;
+END;
+$$;
+
+-- Eliminar Cliente
+
+CREATE OR REPLACE PROCEDURE sp_eliminar_cliente(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM Cliente WHERE id = _id;
+END;
+$$;
+
+-- 4. Stored Procedures Reservas
+
+-- Crear Reserva
+
+CREATE OR REPLACE PROCEDURE sp_crear_reserva(
+    _id_cliente INT,
+    _id_hotel INT,
+    _fecha_inicio DATE,
+    _fecha_fin DATE,
+    _estado VARCHAR(20)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO Reserva (id_cliente, id_hotel, fecha_inicio, fecha_fin, estado)
+    VALUES (_id_cliente, _id_hotel, _fecha_inicio, _fecha_fin, _estado);
+END;
+$$;
+-- Leer Reserva
+
+CREATE OR REPLACE PROCEDURE sp_leer_reserva(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Usar RAISE NOTICE para mostrar los datos de la reserva
+    RAISE NOTICE 'Resultado Reserva: %', (SELECT estado FROM Reserva WHERE id = _id);
+END;
+$$;
+
+-- Actualizar Reserva
+
+CREATE OR REPLACE PROCEDURE sp_actualizar_reserva(
+    _id INT,
+    _id_cliente INT,
+    _id_hotel INT,
+    _fecha_inicio DATE,
+    _fecha_fin DATE,
+    _estado VARCHAR(20)
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE Reserva
+    SET id_cliente = _id_cliente, id_hotel = _id_hotel, fecha_inicio = _fecha_inicio, fecha_fin = _fecha_fin, estado = _estado
+    WHERE id = _id;
+END;
+$$;
+
+-- Eliminar Reserva
+
+CREATE OR REPLACE PROCEDURE sp_eliminar_reserva(
+    _id INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM Reserva WHERE id = _id;
+END;
+$$;
+
+
+-- Triggers
+
+-- Auditoría de cambios en la tabla Reserva
+-- Registrar cada vez que se crea, actualiza o elimina una reserva, con información como el tipo de acción, fecha y usuario (si aplica).
+
+-- Función de auditoría para reservas
+
+CREATE OR REPLACE FUNCTION fn_auditar_reserva()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO AuditoriaReserva (id_reserva, accion, usuario, fecha, observaciones)
+    VALUES (NEW.id, 'INSERT', current_user, CURRENT_TIMESTAMP, 'Nueva reserva creada');
+    
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO AuditoriaReserva (id_reserva, accion, usuario, fecha, observaciones)
+    VALUES (NEW.id, 'UPDATE', current_user, CURRENT_TIMESTAMP, 'Reserva actualizada');
+    
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO AuditoriaReserva (id_reserva, accion, usuario, fecha, observaciones)
+    VALUES (OLD.id, 'DELETE', current_user, CURRENT_TIMESTAMP, 'Reserva eliminada');
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger asociado a la tabla Reserva
+-- Este trigger llama a la función anterior cuando ocurre un INSERT, UPDATE o DELETE:
+
+CREATE TRIGGER tr_auditar_reserva
+AFTER INSERT OR UPDATE OR DELETE ON Reserva
+FOR EACH ROW
+EXECUTE FUNCTION fn_auditar_reserva();
+
+
+-- Auditoria Estancia
+-- Este trigger registra automáticamente en una tabla de auditoría cada vez que se crea o se actualiza una estancia (Estancia). Esto es útil para:
+
+-- Funcion de auditoria Estancia
+
+CREATE OR REPLACE FUNCTION registrar_auditoria_estancia()
+RETURNS TRIGGER AS $$ 
+BEGIN
+    -- Insertar un registro en la tabla AuditoriaEstancia
+    INSERT INTO AuditoriaEstancia (id_estancia, accion, usuario, observaciones)
+    VALUES (
+        NEW.id,                                -- ID de la estancia
+        TG_OP,                                 -- 'INSERT' o 'UPDATE'
+        current_user,                          -- El usuario actual
+        CONCAT('Estancia modificada. Check-in: ', COALESCE(NEW.fecha_checkin::TEXT, 'null'),
+               ', Check-out: ', COALESCE(NEW.fecha_checkout::TEXT, 'null'))
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+-- Crear el trigger en la tabla Estancia
+
+CREATE TRIGGER trg_auditoria_estancia
+AFTER INSERT OR UPDATE ON Estancia
+FOR EACH ROW
+EXECUTE FUNCTION registrar_auditoria_estancia();
+
+
+-- Auditoria Asignacion de Habitación
+
+-- Funcion de auditoria Habitacion
+
+CREATE OR REPLACE FUNCTION log_estado_habitacion()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+        INSERT INTO AuditoriaHabitacion (id_habitacion, accion, usuario, descripcion)
+        VALUES (
+            NEW.id,
+            'Cambio de estado',
+            current_user,
+            'El estado cambió de "' || OLD.estado || '" a "' || NEW.estado || '"'
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -- Trigger asociado a la tabla Habitacion
+
+CREATE TRIGGER trg_log_estado_habitacion
+AFTER UPDATE ON Habitacion
+FOR EACH ROW
+WHEN (OLD.estado IS DISTINCT FROM NEW.estado)
+EXECUTE FUNCTION log_estado_habitacion();
+
+
+-- FUNCIONES
+
+
+-- Funciones Hotel
+
+-- Función 1: Contar habitaciones por hotel
+
+CREATE OR REPLACE FUNCTION contar_habitaciones_por_hotel(hotel_id INT)
+RETURNS INT AS $$
+DECLARE
+    total INT;
+BEGIN
+    SELECT COUNT(*) INTO total
+    FROM Habitacion
+    WHERE id_hotel = hotel_id;
+
+    RETURN total;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+-- Función 2: Obtener facturación total de un hotel
+
+CREATE OR REPLACE FUNCTION obtener_facturacion_total_por_hotel(hotel_id INT)
+RETURNS NUMERIC AS $$
+DECLARE
+    total NUMERIC;
+BEGIN
+    SELECT SUM(f.total)
+    INTO total
+    FROM Factura f
+    JOIN Estancia e ON f.id_estancia = e.id
+    JOIN Reserva r ON e.id_reserva = r.id
+    WHERE r.id_hotel = hotel_id;
+
+    RETURN COALESCE(total, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+-- Funciones Habitacion
+
+-- Función 1: Verificar disponibilidad de una habitación en un rango de fechas
+
+
+CREATE OR REPLACE FUNCTION verificar_disponibilidad_habitacion(
+    habitacion_id INT,
+    p_fecha_inicio DATE,  -- Cambié el nombre del parámetro para evitar confusión
+    p_fecha_fin DATE      -- Cambié el nombre del parámetro para evitar confusión
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    conflictos INT;
+BEGIN
+    SELECT COUNT(*) INTO conflictos
+    FROM Estancia e
+    JOIN Reserva r ON e.id_reserva = r.id
+    WHERE e.id_habitacion = habitacion_id
+      AND r.estado IN ('confirmada', 'pendiente') -- evitamos habitaciones ya asignadas
+      AND (
+            (r.fecha_inicio, r.fecha_fin) OVERLAPS (p_fecha_inicio, p_fecha_fin)  -- Usamos los parámetros con nombres distintos
+          );
+
+    RETURN conflictos = 0;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+-- Función 2: Obtener el precio base de una habitación
+
+CREATE OR REPLACE FUNCTION obtener_precio_base_habitacion(habitacion_id INT)
+RETURNS NUMERIC AS $$
+DECLARE
+    precio NUMERIC;
+BEGIN
+    SELECT th.precio_base
+    INTO precio
+    FROM Habitacion h
+    JOIN TipoHabitacion th ON h.id_tipo_habitacion = th.id
+    WHERE h.id = habitacion_id;
+
+    RETURN COALESCE(precio, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Funciones Cliente
+
+-- Función 1: Obtener el número total de reservas de un cliente
+-- Objetivo: Contar cuántas reservas ha hecho un cliente, útil para estadísticas y programas de fidelización.
+
+
+CREATE OR REPLACE FUNCTION contar_reservas_cliente(cliente_id INT)
+RETURNS INT AS $$
+DECLARE
+    total INT;
+BEGIN
+    SELECT COUNT(*) INTO total
+    FROM Reserva
+    WHERE id_cliente = cliente_id;
+
+    RETURN total;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Función 2: Obtener el último hotel reservado por un cliente
+-- Objetivo: Identificar cuál fue el último hotel donde un cliente hizo una reserva (por fecha de reserva más reciente).
+
+
+CREATE OR REPLACE FUNCTION ultimo_hotel_cliente(cliente_id INT)
+RETURNS TEXT AS $$
+DECLARE
+    nombre_hotel TEXT;
+BEGIN
+    SELECT h.nombre INTO nombre_hotel
+    FROM Reserva r
+    JOIN Hotel h ON r.id_hotel = h.id
+    WHERE r.id_cliente = cliente_id
+    ORDER BY r.fecha_reserva DESC
+    LIMIT 1;
+
+    RETURN nombre_hotel;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Funciones Reservas
+
+-- Función 1 para la tabla Reserva: Calcular duración de la estancia
+-- Descripción: Calcula la duración de la estancia de una reserva, es decir, el número de días entre la fecha de inicio y la fecha de fin de la reserva.
+
+
+CREATE OR REPLACE FUNCTION calcular_duracion_estancia(id_reserva INT)
+RETURNS INT AS $$
+DECLARE
+    fecha_inicio DATE;
+    fecha_fin DATE;
+    duracion INT;
+BEGIN
+    -- Obtener las fechas de inicio y fin de la reserva
+    SELECT r.fecha_inicio, r.fecha_fin
+    INTO fecha_inicio, fecha_fin
+    FROM Reserva r
+    WHERE r.id = id_reserva;
+
+    -- Calcular la duración de la estancia
+    duracion := fecha_fin - fecha_inicio;
+
+    RETURN duracion;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Resultado esperado:
+-- El resultado será el número de días de la estancia, por ejemplo, si la reserva tiene fecha de inicio el 2025-05-01 y fecha de fin el 2025-05-07, el resultado sería 6 días.
+
+-- Función 2 para la tabla Reserva: Verificar si la reserva se cruza con otra
+-- Descripción: Verifica si las fechas de una nueva reserva se cruzan con las fechas de reservas existentes para la misma habitación. Devuelve TRUE si hay cruce y FALSE si no hay cruce.
+
+CREATE OR REPLACE FUNCTION verificar_cruce_reservas(
+    p_fecha_inicio DATE,
+    p_fecha_fin DATE,
+    p_id_habitacion INT
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    cruce BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1
+        FROM Reserva r
+        JOIN Estancia e ON e.id_reserva = r.id
+        WHERE e.id_habitacion = p_id_habitacion
+          AND e.fecha_checkin < p_fecha_fin
+          AND e.fecha_checkout > p_fecha_inicio
+    )
+    INTO cruce;
+
+    RETURN cruce;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Para verificar si una nueva reserva se cruza con otra, se deben proporcionar las fechas de inicio (fecha_inicio), fechas de fin (fecha_fin) y el id_habitacion de la habitación que se está reservando. La función devolverá TRUE si hay cruce de fechas y FALSE si no.
+
+
+
+-- Resultado esperado:
+-- El resultado sería TRUE si ya existe una reserva para esa habitación en ese rango de fechas o FALSE si no se cruza con ninguna otra reserva.
+
+
+-- CONSULTAS
+
+-- 1. Tabla: Hotel
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT h.id, h.nombre, h.ciudad, h.pais, t.descripcion AS tipo_habitacion
+FROM Hotel h
+INNER JOIN Habitacion hb ON h.id = hb.id_hotel
+INNER JOIN TipoHabitacion t ON hb.id_tipo_habitacion = t.id;
+
+-- Explicación: Esta consulta obtiene los hoteles junto con los tipos de habitaciones disponibles en cada uno. Se usan dos INNER JOIN para conectar las tablas Hotel, Habitacion y TipoHabitacion.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT h.id, h.nombre, h.direccion, COUNT(hb.id) AS habitaciones_disponibles
+FROM Hotel h
+LEFT JOIN Habitacion hb ON h.id = hb.id_hotel AND hb.estado = 'disponible'
+GROUP BY h.id;
+
+-- Explicación: Esta consulta devuelve todos los hoteles, junto con el número de habitaciones disponibles (si las hay). El LEFT JOIN asegura que todos los hoteles aparezcan, incluso si no tienen habitaciones disponibles.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT nombre, direccion
+FROM Hotel
+WHERE id IN (SELECT DISTINCT id_hotel FROM Habitacion WHERE estado = 'disponible');
+
+-- Explicación: Esta subconsulta devuelve los hoteles que tienen al menos una habitación disponible. Se usa una subconsulta en el WHERE para filtrar los hoteles que tienen habitaciones con estado 'disponible'.
+
+-- Subconsulta 2
+
+SELECT nombre
+FROM Hotel
+WHERE id = (SELECT id_hotel FROM Habitacion WHERE numero = '101' LIMIT 1);
+
+-- Explicación: Esta subconsulta obtiene el nombre del hotel que tiene la habitación con el número '101'. Se utiliza una subconsulta en el WHERE para obtener el id_hotel correspondiente a esa habitación.
+
+-- 2. Tabla: TipoHabitacion
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT th.descripcion, COUNT(hb.id) AS total_habitaciones
+FROM TipoHabitacion th
+INNER JOIN Habitacion hb ON th.id = hb.id_tipo_habitacion
+GROUP BY th.descripcion;
+
+-- Explicación: Esta consulta obtiene el número total de habitaciones por tipo de habitación. Se utiliza un INNER JOIN entre TipoHabitacion y Habitacion para contar las habitaciones de cada tipo.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT th.descripcion, SUM(s.precio) AS precio_total_servicios
+FROM TipoHabitacion th
+LEFT JOIN Habitacion hb ON th.id = hb.id_tipo_habitacion
+LEFT JOIN HabitacionServicio hs ON hb.id = hs.id_habitacion
+LEFT JOIN Servicio s ON hs.id_servicio = s.id
+GROUP BY th.descripcion;
+
+-- Explicación: Aquí se obtiene el precio total de los servicios asociados a cada tipo de habitación. Se usa un LEFT JOIN para asegurar que se incluyan todos los tipos de habitaciones, incluso si no tienen servicios asociados.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+
+SELECT descripcion
+FROM TipoHabitacion
+WHERE id IN (SELECT DISTINCT id_tipo_habitacion FROM Habitacion WHERE piso = 3);
+
+-- Explicación: Esta subconsulta devuelve los tipos de habitación que están disponibles en el piso 3, usando una subconsulta en el WHERE.
+
+-- Subconsulta 2
+
+SELECT precio_base
+FROM TipoHabitacion
+WHERE id = (SELECT id_tipo_habitacion FROM Habitacion WHERE numero = '101' LIMIT 1);
+
+-- Explicación: Devuelve el precio base del tipo de habitación asociado a la habitación número '101', usando una subconsulta en el WHERE.
+
+-- 3. Tabla: Habitacion
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT h.numero, h.piso, t.descripcion AS tipo_habitacion, h.estado
+FROM Habitacion h
+INNER JOIN TipoHabitacion t ON h.id_tipo_habitacion = t.id
+WHERE h.estado = 'disponible';
+
+-- Explicación: Esta consulta obtiene las habitaciones disponibles y sus tipos. Se hace un INNER JOIN entre Habitacion y TipoHabitacion para obtener la descripción del tipo de habitación.
+
+-- Consulta 2 - RIGHT JOIN
+
+SELECT h.numero, h.estado, hb.descripcion AS tipo_habitacion, hb.capacidad
+FROM Habitacion h
+RIGHT JOIN TipoHabitacion hb ON h.id_tipo_habitacion = hb.id
+LEFT JOIN HabitacionServicio hs ON h.id = hs.id_habitacion
+LEFT JOIN Servicio s ON hs.id_servicio = s.id;
+
+-- Explicación: Esta consulta usa un RIGHT JOIN para incluir todos los tipos de habitación, independientemente de si hay habitaciones asignadas a esos tipos. También incluye los servicios asociados a las habitaciones.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT numero
+FROM Habitacion
+WHERE id_tipo_habitacion = (SELECT id_tipo_habitacion FROM TipoHabitacion WHERE descripcion = 'Suite');
+
+-- Explicación: Obtiene los números de las habitaciones que son del tipo 'Suite', usando una subconsulta en el WHERE.
+
+-- Subconsulta 2
+
+SELECT estado
+FROM Habitacion
+WHERE id = (SELECT id_habitacion FROM Estancia WHERE id_reserva = 123 LIMIT 1);
+
+-- Explicación: Devuelve el estado de la habitación que está asociada con la reserva con ID 123, utilizando una subconsulta en el WHERE.
+
+-- 4. Tabla: Cliente
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT c.nombre, c.apellido, r.fecha_inicio, r.fecha_fin
+FROM Cliente c
+INNER JOIN Reserva r ON c.id = r.id_cliente
+WHERE r.estado = 'confirmada';
+
+-- Explicación: Esta consulta devuelve los clientes junto con las fechas de sus reservas confirmadas, usando un INNER JOIN entre Cliente y Reserva.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT c.nombre, c.email, COUNT(r.id) AS total_reservas
+FROM Cliente c
+LEFT JOIN Reserva r ON c.id = r.id_cliente
+GROUP BY c.id;
+
+-- Explicación: Esta consulta devuelve todos los clientes junto con el número de reservas que tienen. El LEFT JOIN asegura que todos los clientes se incluyan, incluso si no tienen reservas.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT nombre, apellido
+FROM Cliente
+WHERE id = (SELECT id_cliente FROM Reserva WHERE estado = 'pendiente' LIMIT 1);
+
+-- Explicación: Devuelve el nombre y apellido del cliente asociado con una reserva pendiente, utilizando una subconsulta en el WHERE.
+
+-- Subconsulta 2
+
+SELECT nombre
+FROM Cliente
+WHERE id IN (SELECT id_cliente FROM Reserva WHERE fecha_inicio > CURRENT_DATE);
+
+-- Explicación: Obtiene los nombres de los clientes que tienen reservas futuras, usando una subconsulta en el WHERE.
+
+-- 5. Tabla: Reserva
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT r.id, r.fecha_inicio, r.fecha_fin, c.nombre, c.apellido
+FROM Reserva r
+INNER JOIN Cliente c ON r.id_cliente = c.id
+WHERE r.estado = 'confirmada';
+
+-- Explicación: Esta consulta muestra las reservas confirmadas y los clientes que las hicieron. Se hace un INNER JOIN entre Reserva y Cliente para obtener los datos del cliente.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT r.id, r.fecha_inicio, r.fecha_fin, h.nombre AS hotel, e.id_habitacion
+FROM Reserva r
+LEFT JOIN Hotel h ON r.id_hotel = h.id
+LEFT JOIN Estancia e ON r.id = e.id_reserva
+WHERE r.estado = 'pendiente';
+
+-- Explicación: Esta consulta devuelve todas las reservas pendientes, incluyendo información del hotel y las habitaciones asociadas. Se usa LEFT JOIN para incluir todas las reservas, incluso si no tienen estancia asociada.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT fecha_inicio, fecha_fin
+FROM Reserva
+WHERE id_cliente = (SELECT id_cliente FROM Reserva WHERE id = 10);
+
+-- Explicación: Devuelve las fechas de inicio y fin de la reserva asociada al cliente que hizo la reserva con ID 10. Usamos una subconsulta en el WHERE.
+
+-- Subconsulta 2
+
+SELECT id_hotel
+FROM Reserva
+WHERE fecha_inicio > '2025-06-01'
+AND estado = 'confirmada';
+
+-- Explicación: Obtiene el id_hotel de las reservas confirmadas que empiezan después del 1 de junio de 2025. Usamos una subconsulta en el WHERE.
+
+-- 6. Tabla: Estancia
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT e.id, e.fecha_checkin, e.fecha_checkout, h.numero AS habitacion
+FROM Estancia e
+INNER JOIN Habitacion h ON e.id_habitacion = h.id;
+
+-- Explicación: Esta consulta devuelve la información de las estancias junto con los números de las habitaciones asociadas.
+
+-- Consulta 2 - RIGHT JOIN
+
+SELECT e.id, e.fecha_checkin, e.fecha_checkout, r.fecha_inicio, r.fecha_fin
+FROM Estancia e
+RIGHT JOIN Reserva r ON e.id_reserva = r.id;
+
+-- Explicación: Esta consulta muestra todas las estancias y sus fechas, pero también incluye las reservas que no tienen estancia asociada aún (usando un RIGHT JOIN).
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT fecha_checkin, fecha_checkout
+FROM Estancia
+WHERE id_reserva = (SELECT id FROM Reserva WHERE id_cliente = 5 LIMIT 1);
+
+-- Explicación: Devuelve las fechas de check-in y check-out de la estancia asociada a la reserva del cliente con ID 5. Usamos una subconsulta en el WHERE.
+
+-- Subconsulta 2
+
+SELECT id_habitacion
+FROM Estancia
+WHERE fecha_checkout < CURRENT_DATE;
+
+-- Explicación: Obtiene los id_habitacion de las estancias que ya han terminado (check-out antes de la fecha actual).
+
+-- 7. Tabla: Servicio
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT s.nombre, s.precio, e.nombre AS empleado
+FROM Servicio s
+INNER JOIN Empleado e ON s.id = e.id_hotel
+WHERE e.id_hotel = 1;
+
+-- Explicación: Esta consulta devuelve los servicios disponibles en un hotel, junto con el empleado que los ofrece, usando un INNER JOIN entre Servicio y Empleado.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT s.nombre, s.precio, COUNT(hs.id) AS habitaciones_con_servicio
+FROM Servicio s
+LEFT JOIN HabitacionServicio hs ON s.id = hs.id_servicio
+GROUP BY s.id;
+
+-- Explicación: Muestra todos los servicios y cuántas habitaciones tienen asociados esos servicios, usando un LEFT JOIN entre Servicio y HabitacionServicio.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT nombre
+FROM Servicio
+WHERE id = (SELECT id_servicio FROM HabitacionServicio WHERE id_habitacion = 1 LIMIT 1);
+
+-- Explicación: Devuelve el nombre del servicio asociado a la habitación con ID 1. Usamos una subconsulta en el WHERE.
+
+-- Subconsulta 2
+
+SELECT nombre
+FROM Servicio
+WHERE precio = (SELECT MAX(precio) FROM Servicio);
+
+-- Explicación: Obtiene el nombre del servicio más caro, usando una subconsulta para obtener el precio máximo.
+
+-- 8. Tabla: Factura
+-- Consultas
+-- Consulta 1 - INNER JOIN
+
+SELECT f.id, f.fecha_emision, f.total, c.nombre AS cliente
+FROM Factura f
+INNER JOIN Estancia e ON f.id_estancia = e.id
+INNER JOIN Reserva r ON e.id_reserva = r.id
+INNER JOIN Cliente c ON r.id_cliente = c.id
+WHERE f.estado = 'pendiente';
+
+-- Explicación: Esta consulta obtiene las facturas pendientes y el nombre del cliente asociado a cada estancia. 
+-- Se usa INNER JOIN entre Factura, Estancia, Reserva y Cliente.
+
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT f.id, f.total, df.concepto, df.subtotal
+FROM Factura f
+LEFT JOIN DetalleFactura df ON f.id = df.id_factura;
+
+-- Explicación: Muestra las facturas y los detalles de cada factura (concepto y subtotal) si existen. Usa LEFT JOIN para asegurar que se muestren todas las facturas.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT fecha_emision, total
+FROM Factura
+WHERE id = (SELECT id_factura FROM DetalleFactura WHERE cantidad > 5 LIMIT 1);
+
+-- Explicación: Devuelve la fecha de emisión y el total de la factura relacionada con un detalle de factura que tiene más de 5 unidades de un servicio.
+
+-- Subconsulta 2
+
+SELECT total
+FROM Factura
+WHERE id_estancia = (SELECT id FROM Estancia WHERE id_habitacion = 101 LIMIT 1);
+
+-- Explicación: Devuelve el total de la factura asociada a la estancia de la habitación 101.
+
+-- 9.Tabla: Empleado
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT e.nombre, e.apellido, r.nombre AS rol
+FROM Empleado e
+INNER JOIN EmpleadoRol er ON e.id = er.id_empleado
+INNER JOIN Rol r ON er.id_rol = r.id;
+
+-- Explicación: Esta consulta muestra los empleados y sus roles asociados. Se usa INNER JOIN entre Empleado, EmpleadoRol y Rol.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT e.nombre, e.apellido, h.nombre AS hotel
+FROM Empleado e
+LEFT JOIN Hotel h ON e.id_hotel = h.id;
+
+-- Explicación: Muestra todos los empleados y el nombre del hotel en el que trabajan, incluso si no están asignados a un hotel, usando LEFT JOIN.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT nombre
+FROM Empleado
+WHERE id = (SELECT id_empleado FROM EmpleadoRol WHERE id_rol = 1 LIMIT 1);
+
+-- Explicación: Devuelve el nombre del empleado asociado con el rol con ID 1, usando una subconsulta.
+
+-- Subconsulta 2
+
+SELECT nombre
+FROM Empleado
+WHERE id_hotel = (SELECT id_hotel FROM Hotel WHERE nombre = 'Hotel A');
+
+-- Explicación: Obtiene los nombres de los empleados que trabajan en el hotel llamado 'Hotel A'.
+
+-- 10. Tabla: Rol
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT r.nombre AS rol, e.nombre, e.apellido
+FROM Rol r
+INNER JOIN EmpleadoRol er ON r.id = er.id_rol
+INNER JOIN Empleado e ON er.id_empleado = e.id;
+
+-- Explicación: Muestra los roles de los empleados junto con los nombres de los empleados, usando un INNER JOIN entre las tablas Rol, EmpleadoRol y Empleado.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT r.nombre AS rol, COUNT(er.id_empleado) AS num_empleados
+FROM Rol r
+LEFT JOIN EmpleadoRol er ON r.id = er.id_rol
+GROUP BY r.id;
+
+-- Explicación: Muestra todos los roles y el número de empleados asignados a cada uno. Usa LEFT JOIN para incluir todos los roles, incluso si no tienen empleados asignados.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT nombre
+FROM Rol
+WHERE id = (SELECT id_rol FROM EmpleadoRol WHERE id_empleado = 3 LIMIT 1);
+
+-- Explicación: Obtiene el nombre del rol del empleado con ID 3. Usa una subconsulta en el WHERE para obtener el id_rol del empleado.
+
+-- Subconsulta 2
+
+SELECT COUNT(*)
+FROM EmpleadoRol
+WHERE id_rol = (SELECT id FROM Rol WHERE nombre = 'Recepcionista');
+
+-- Explicación: Cuenta cuántos empleados tienen el rol de 'Recepcionista', usando una subconsulta para obtener el id del rol.
+
+-- 11. Tabla: Usuario
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT u.username, u.rol, c.nombre, c.apellido
+FROM Usuario u
+INNER JOIN Cliente c ON u.id_cliente = c.id
+WHERE u.rol = 'cliente';
+
+-- Explicación: Muestra los usuarios que son clientes, junto con su nombre y apellido, usando un INNER JOIN entre Usuario y Cliente.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT u.username, u.rol, e.nombre, e.apellido
+FROM Usuario u
+LEFT JOIN Empleado e ON u.id_empleado = e.id;
+
+-- Explicación: Muestra todos los usuarios y, si tienen un empleado asignado, muestra el nombre y apellido del empleado. Usamos un LEFT JOIN entre Usuario y Empleado.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT username
+FROM Usuario
+WHERE id_cliente = (SELECT id_cliente FROM Cliente WHERE nombre = 'Juan' LIMIT 1);
+
+-- Explicación: Devuelve el nombre de usuario del cliente llamado 'Juan', usando una subconsulta para obtener el id_cliente de 'Juan'.
+
+-- Subconsulta 2
+
+SELECT username
+FROM Usuario
+WHERE id_empleado = (SELECT id_empleado FROM Empleado WHERE email = 'empleado@hotel.com');
+
+-- Explicación: Obtiene el nombre de usuario del empleado con el email 'empleado@hotel.com', usando una subconsulta para obtener el id_empleado.
+
+-- 12. Tabla: HabitacionServicio
+-- Consultas:
+-- Consulta 1 - INNER JOIN
+
+SELECT hs.id_habitacion, s.nombre AS servicio
+FROM HabitacionServicio hs
+INNER JOIN Servicio s ON hs.id_servicio = s.id;
+
+-- Explicación: Muestra las habitaciones y los servicios asociados a ellas, usando un INNER JOIN entre HabitacionServicio y Servicio.
+
+-- Consulta 2 - LEFT JOIN
+
+SELECT hs.id_habitacion, h.numero, s.nombre AS servicio
+FROM HabitacionServicio hs
+LEFT JOIN Habitacion h ON hs.id_habitacion = h.id
+LEFT JOIN Servicio s ON hs.id_servicio = s.id;
+
+-- Explicación: Devuelve todas las habitaciones y sus servicios, incluso si no tienen servicios asociados, usando LEFT JOIN.
+
+-- Subconsultas:
+-- Subconsulta 1
+
+SELECT id_servicio
+FROM HabitacionServicio
+WHERE id_habitacion = (SELECT id FROM Habitacion WHERE numero = '101');
+
+-- Explicación: Devuelve el id_servicio de la habitación con número 101, usando una subconsulta para obtener el id de la habitación.
+
+-- Subconsulta 2
+
+SELECT nombre
+FROM Servicio
+WHERE id = (SELECT id_servicio FROM HabitacionServicio WHERE id_habitacion = 2 LIMIT 1);
+-- Explicación: Devuelve el nombre del servicio asociado a la habitación con ID 2.
+
+
+-- CONSULTAS COMPLEJAS USANDO CTEs
+
+-- 1. Ingresos mensuales por hotel en 2025
+
+WITH IngresosMensuales AS (
+    SELECT 
+        h.id AS hotel_id,
+        h.nombre AS hotel,
+        DATE_TRUNC('month', f.fecha_emision) AS mes,
+        SUM(f.total) AS ingresos
+    FROM 
+        Factura f
+        INNER JOIN Estancia e ON f.id_estancia = e.id
+        INNER JOIN Habitacion ha ON e.id_habitacion = ha.id
+        INNER JOIN Hotel h ON ha.id_hotel = h.id
+    WHERE EXTRACT(YEAR FROM f.fecha_emision) = 2025
+    GROUP BY h.id, h.nombre, mes
+)
+SELECT * 
+FROM IngresosMensuales
+ORDER BY hotel, mes;
+
+-- 2. Clientes que gastaron más de $250 en total
+
+WITH GastoClientes AS (
+    SELECT 
+        c.id,
+        c.nombre,
+        c.apellido,
+        SUM(f.total) AS total_gastado
+    FROM Cliente c
+    INNER JOIN Reserva r ON c.id = r.id_cliente
+    INNER JOIN Estancia e ON r.id = e.id_reserva
+    INNER JOIN Factura f ON f.id_estancia = e.id
+    GROUP BY c.id, c.nombre, c.apellido
+)
+SELECT * 
+FROM GastoClientes
+WHERE total_gastado > 250
+ORDER BY total_gastado DESC;
+
+
+-- 3. Consulta Con CTEs
+
+-- La consulta tiene como objetivo calcular cuánto dinero ha generado cada tipo de habitación (por ejemplo, "Doble", "Suite") en función de las facturas emitidas por las estancias asociadas a esas habitaciones. El cálculo se hace para el hotel con ID = 3.
+
+WITH HabitacionesHotel AS (
+    SELECT ha.id AS habitacion_id, th.descripcion AS tipo_habitacion
+    FROM Habitacion ha
+    JOIN TipoHabitacion th ON ha.id_tipo_habitacion = th.id
+    WHERE ha.id_hotel = 3
+),
+EstanciasHotel AS (
+    SELECT e.id AS estancia_id, e.id_habitacion
+    FROM Estancia e
+    JOIN HabitacionesHotel hh ON e.id_habitacion = hh.habitacion_id
+),
+FacturasEstancias AS (
+    SELECT f.id AS factura_id, df.subtotal AS monto, hh.tipo_habitacion
+    FROM Factura f
+    JOIN DetalleFactura df ON f.id = df.id_factura
+    JOIN EstanciasHotel e ON f.id_estancia = e.estancia_id
+    JOIN HabitacionesHotel hh ON e.id_habitacion = hh.habitacion_id
+)
+SELECT tipo_habitacion, SUM(monto) AS ingresos_totales
+FROM FacturasEstancias
+GROUP BY tipo_habitacion
+ORDER BY ingresos_totales DESC;
+
+-- 4. Calcula el total de estancias por cliente en un hotel específico:
+
+-- Esto te da una lista de clientes junto con el número de estancias que han tenido en el hotel con id_hotel = 3, ordenados por el número de estancias de mayor a menor.
+
+WITH EstanciasPorCliente AS (
+    SELECT 
+        c.nombre || ' ' || c.apellido AS cliente,
+        COUNT(e.id) AS total_estancias
+    FROM Estancia e
+    JOIN Reserva r ON e.id_reserva = r.id
+    JOIN Cliente c ON r.id_cliente = c.id
+    WHERE r.id_hotel = 3
+    GROUP BY c.id
+)
+SELECT cliente, total_estancias
+FROM EstanciasPorCliente
+ORDER BY total_estancias DESC;
+
+-- ROLESS
+
+-- Crear roles en la base de datos
+CREATE ROLE recepcionista;
+CREATE ROLE gerente_hotel;
+CREATE ROLE administrador_cadena;
+CREATE ROLE cliente;
+
+-- Asignar permisos a los roles
+GRANT SELECT, INSERT ON Cliente, Reserva, Estancia TO recepcionista;
+GRANT SELECT, INSERT, UPDATE ON Habitacion, Factura TO gerente_hotel;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO administrador_cadena;
+GRANT SELECT ON Habitacion TO cliente;
+
+-- En este caso:
+
+-- El recepcionista puede consultar (SELECT) y insertar (INSERT) datos en las tablas de Cliente, Reserva y Estancia.
+
+-- El gerente de hotel tiene permisos para consultar, insertar y actualizar datos en Habitacion y Factura.
+
+-- El administrador de cadena tiene todos los privilegios sobre todas las tablas (esto lo haría un superusuario de la base de datos).
+
+-- El cliente solo puede consultar (SELECT) información sobre las habitaciones.
+
+
+-- Crear un usuario y asignar un rol
+CREATE USER juan_perez WITH PASSWORD 'contrasena123';
+GRANT recepcionista TO juan_perez;
+
+CREATE USER maria_garcia WITH PASSWORD 'contrasena456';
+GRANT cliente TO maria_garcia;
+
+-- En este caso:
+
+-- Juan Pérez es un usuario con el rol recepcionista, por lo que tiene los permisos correspondientes.
+
+-- María García es un usuario con el rol cliente, y solo puede consultar información
+
+-- Revocar permisos de un usuario
+REVOKE INSERT ON Reserva FROM juan_perez;
+
+
+
